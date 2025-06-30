@@ -33,6 +33,16 @@ This plugin provides depending / cascading custom field formats for Redmine that
    - Choosing a value for a parent field hides the "No change" option on all of
      its descendants so invalid values can't be kept
 
+## Context menu wizard
+
+Open the context menu on an issue list (right-click or the menu button) to
+access the wizard. Users who have the **Edit issues** permission will see a menu
+entry for each parent custom field that is valid for all selected issues.
+Choosing one of these entries expands the menu in place and shows cascading
+select boxes with a save button. Child fields are hidden from the normal menu so
+dependencies cannot be broken. The selected value is stored for every chosen
+issue once you click **Save**.
+
 ## Installation
 
 1. Copy this plugin directory into `plugins` of your Redmine installation.

@@ -42,4 +42,5 @@ module RedmineDependingCustomFields
       Redmine::FieldFormat.delete FIELD_FORMAT_DEPENDABLE_ENUMERATION
     end
   end
+
 end

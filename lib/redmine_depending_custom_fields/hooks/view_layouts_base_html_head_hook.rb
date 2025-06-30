@@ -3,22 +3,28 @@ module RedmineDependingCustomFields
     class ViewLayoutsBaseHtmlHeadHook < Redmine::Hook::ViewListener
       def view_layouts_base_html_head(_context = {})
         mapping = Rails.cache.fetch('depending_custom_fields/mapping') do
-          cfs = CustomField.where(field_format: [RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_LIST,
-                                                RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_ENUMERATION])
-          cfs.each_with_object({}) do |cf, h|
-            next unless cf.parent_custom_field_id.present?
-
-            h[cf.id.to_s] = {
-              parent_id: cf.parent_custom_field_id.to_s,
-              map: RedmineDependingCustomFields.sanitize_dependencies(cf.value_dependencies)
-            }
-          end
+          RedmineDependingCustomFields::MappingBuilder.build
         end
 
-        script = "window.DependingCustomFieldData = #{mapping.to_json};"
+        base_path = if ActionController::Base.respond_to?(:relative_url_root)
+                      ActionController::Base.relative_url_root.to_s
+                    else
+                      ''
+                    end
+
+        script = <<~JS.html_safe
+          window.DependingCustomFieldData = #{mapping.to_json};
+          window.ContextMenuWizardConfig = #{
+            {
+              basePath: base_path
+            }.to_json
+          };
+        JS
+
         javascript_include_tag('depending_custom_fields', plugin: 'redmine_depending_custom_fields') +
-          stylesheet_link_tag('depending_custom_fields', plugin: 'redmine_depending_custom_fields') +
-          javascript_tag(script)
+          javascript_tag(script) +
+          javascript_include_tag('context_menu_wizard', plugin: 'redmine_depending_custom_fields') +
+          stylesheet_link_tag('depending_custom_fields', plugin: 'redmine_depending_custom_fields')
       end
     end
   end

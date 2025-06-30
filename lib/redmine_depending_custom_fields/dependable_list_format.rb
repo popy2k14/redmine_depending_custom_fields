@@ -40,8 +40,8 @@ module RedmineDependingCustomFields
           objects = object.is_a?(Array) ? object : [object]
           allowed = nil
           objects.each do |obj|
-            pv = obj.custom_field_value(parent)
-            vals = Array(mapping[pv.to_s])
+            pvals = Array(obj.custom_field_value(parent)).map(&:to_s)
+            vals = pvals.flat_map { |v| Array(mapping[v]) }.map(&:to_s).uniq
             allowed = allowed.nil? ? vals : allowed & vals
           end
           allowed ||= []
@@ -73,6 +73,7 @@ module RedmineDependingCustomFields
 
     def after_custom_field_save(_custom_field)
       Rails.cache.delete('depending_custom_fields/mapping')
+      Rails.cache.delete_matched('dcf/*')
     end
 
   end
@@ -112,8 +113,8 @@ module RedmineDependingCustomFields
 
       allowed = nil
       objects.each do |obj|
-        pv = obj.custom_field_value(parent)
-        vals = Array(mapping[pv.to_s])
+        pvals = Array(obj.custom_field_value(parent)).map(&:to_s)
+        vals = pvals.flat_map { |v| Array(mapping[v]) }.map(&:to_s).uniq
         allowed = allowed.nil? ? vals : allowed & vals
       end
 
@@ -133,9 +134,9 @@ module RedmineDependingCustomFields
       raw     = super(custom_field, query)
 
       parent  = CustomField.find_by(id: custom_field.parent_custom_field_id)
-      parent_value = project&.custom_field_value(parent)
+      parent_values = Array(project&.custom_field_value(parent)).map(&:to_s)
       mapping = custom_field.value_dependencies || {}
-      allowed = Array(mapping[parent_value.to_s])
+      allowed = parent_values.flat_map { |pv| Array(mapping[pv]) }.map(&:to_s).uniq
 
       [].tap do |flat|
         raw.each do |opt|
@@ -157,6 +158,7 @@ module RedmineDependingCustomFields
 
     def after_custom_field_save(_custom_field)
       Rails.cache.delete('depending_custom_fields/mapping')
+      Rails.cache.delete_matched('dcf/*')
     end
 
   end

@@ -4,13 +4,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     ensureContainer();
 
-    const raw = window.DependingCustomFieldData || {};
-    const mapping = raw.mapping || raw;
-    const allIds = Array.from(new Set([
-      ...Object.keys(mapping).map(id => parseInt(id, 10)),
-      ...Object.values(mapping).map(info => parseInt(info.parent_id, 10))
-    ]));
-
     const obs = new MutationObserver(setupMenu);
     obs.observe(document.body, { subtree:true, childList:true, attributes:true, attributeFilter:['style'] });
     setupMenu();
@@ -36,7 +29,6 @@
         menu.dataset.dcfInit = '1';
       }
 
-      hideOriginal(menu);
 
       menu.querySelectorAll('li.cf-parent').forEach(li => {
         const a = li.querySelector('a.submenu');
@@ -50,15 +42,6 @@
           if(!tmpl) return;
           openWizard(menu, tmpl, li);
         });
-      });
-    }
-
-    function hideOriginal(menu){
-      allIds.forEach(id => {
-        menu.querySelectorAll(`li.cf_${id}:not(.cf-parent)`).forEach(li => li.style.display = 'none');
-      });
-      menu.querySelectorAll('li.cf-parent').forEach(li => {
-        if(!li.dataset.templateId){ li.style.display = 'none'; }
       });
     }
 

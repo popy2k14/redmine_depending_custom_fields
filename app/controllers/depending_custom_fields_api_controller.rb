@@ -1,11 +1,20 @@
-class DependableCustomFieldsApiController < ApplicationController
+class DependingCustomFieldsApiController < ApplicationController
+  before_action :require_admin
   before_action :find_custom_field, only: [:show, :update, :destroy]
 
   accept_api_auth :index, :show, :create, :update, :destroy if respond_to?(:accept_api_auth)
 
   def index
-    fields = CustomField.where(field_format: field_formats)
-    render json: fields.map { |cf| format_custom_field(cf) }
+    records = CustomField
+                .where(field_format: field_formats)
+                .to_a
+
+    ActiveRecord::Associations::Preloader.new.preload(
+      records,
+      %i[enumerations trackers projects roles]
+    )
+
+    render json: records.map { |cf| format_custom_field(cf) }
   end
 
   def show
@@ -42,13 +51,44 @@ class DependableCustomFieldsApiController < ApplicationController
 
   def field_formats
     ['list', 'enumeration',
-     RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_LIST,
-     RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_ENUMERATION]
+     RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+     RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_ENUMERATION]
   end
 
+  LIST_CLASS_WHITELIST = %w[
+    IssueCustomField
+    TimeEntryCustomField
+    ProjectCustomField
+    VersionCustomField
+    UserCustomField
+    GroupCustomField
+    DocumentCategoryCustomField
+    TimeEntryActivityCustomField
+  ].freeze
+
+  ENUM_CLASS_WHITELIST = %w[
+    IssueCustomField
+    TimeEntryCustomField
+    ProjectCustomField
+    VersionCustomField
+    DocumentCategoryCustomField
+    TimeEntryActivityCustomField
+  ].freeze
+
   def custom_field_class
-    klass = params[:custom_field] && params[:custom_field][:type]
-    klass.present? ? klass.constantize : CustomField
+    klass  = params.dig(:custom_field, :type)
+    format = params.dig(:custom_field, :field_format)
+
+    allowed = case format
+              when 'enumeration', RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_ENUMERATION
+                ENUM_CLASS_WHITELIST
+              else
+                LIST_CLASS_WHITELIST
+              end
+
+    return CustomField if klass.blank? || !allowed.include?(klass)
+
+    klass.constantize
   rescue NameError
     CustomField
   end
@@ -72,6 +112,11 @@ class DependableCustomFieldsApiController < ApplicationController
   end
 
   def format_custom_field(cf)
+    enums    = cf.respond_to?(:enumerations) ? cf.association(:enumerations).target : nil
+    trackers = cf.respond_to?(:trackers) ? cf.association(:trackers).target : []
+    projects = cf.respond_to?(:projects) ? cf.association(:projects).target : []
+    roles    = cf.respond_to?(:roles) ? cf.association(:roles).target : []
+
     {
       id: cf.id,
       name: cf.name,
@@ -88,10 +133,10 @@ class DependableCustomFieldsApiController < ApplicationController
       edit_tag_style: cf.respond_to?(:edit_tag_style) ? cf.edit_tag_style : nil,
       is_for_all: cf.is_for_all,
       possible_values: cf.possible_values,
-      enumerations: cf.respond_to?(:enumerations) ? cf.enumerations.map { |e| { id: e.id, name: e.name, position: e.position } } : nil,
-      trackers: cf.respond_to?(:trackers) ? cf.trackers.map { |t| { id: t.id, name: t.name } } : [],
-      projects: cf.respond_to?(:projects) ? cf.projects.map { |p| { id: p.id, name: p.name } } : [],
-      roles: cf.respond_to?(:roles) ? cf.roles.map { |r| { id: r.id, name: r.name } } : [],
+      enumerations: enums&.map { |e| { id: e.id, name: e.name, position: e.position } },
+      trackers: trackers.map { |t| { id: t.id, name: t.name } },
+      projects: projects.map { |p| { id: p.id, name: p.name } },
+      roles: roles.map { |r| { id: r.id, name: r.name } },
       parent_custom_field_id: cf.respond_to?(:parent_custom_field_id) ? cf.parent_custom_field_id : nil,
       value_dependencies: cf.respond_to?(:value_dependencies) ? cf.value_dependencies : nil
     }
@@ -101,11 +146,13 @@ class DependableCustomFieldsApiController < ApplicationController
     enums = permitted_params[:enumerations]
     return unless enums
 
+    existing_enumerations = custom_field.enumerations.index_by(&:id)
+
     enums.each do |e_params|
       attrs = e_params.to_h.symbolize_keys
 
       if attrs[:id].present?
-        enumeration = custom_field.enumerations.find_by(id: attrs[:id])
+        enumeration = existing_enumerations[attrs[:id].to_i]
         if attrs[:_destroy]
           enumeration.destroy if enumeration
           next

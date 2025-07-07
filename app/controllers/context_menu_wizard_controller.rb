@@ -19,7 +19,10 @@ class ContextMenuWizardController < ApplicationController
   def save
     values = extract_custom_field_values
 
-    unless @issues.all? { |issue| issue.safe_attribute?("custom_field_values", User.current) }
+    unless issues_all? do |issue|
+      !issue.respond_to?(:safe_attribute?) ||
+        issue.safe_attribute?("custom_field_values", User.current)
+    end
       return deny_access
     end
 
@@ -79,10 +82,21 @@ class ContextMenuWizardController < ApplicationController
   end
 
   def parent_options(mapping)
-    parent_ids = mapping.values.map { |i| i[:parent_id].to_i }.uniq
+    parent_ids    = mapping.values.map { |i| i[:parent_id].to_i }.uniq
+    fields_by_id  = CustomField.where(id: parent_ids).index_by(&:id)
+
     parent_ids.map do |pid|
-      cf = CustomField.find_by(id: pid)
+      cf = fields_by_id[pid]
       next unless cf
+
+      next unless issues_all? do |issue|
+        begin
+          issue.available_custom_fields.include?(cf) &&
+            RedmineDependingCustomFields::CustomFieldVisibility.visible_to_user?(cf, issue.project, User.current)
+        rescue NoMethodError
+          true
+        end
+      end
 
       allowed = intersect_allowed_values(cf, @issues) || []
 
@@ -91,12 +105,24 @@ class ContextMenuWizardController < ApplicationController
   end
 
   def child_options(mapping)
-    pid  = params[:parent_id].to_s
-    pval = params[:parent_value].to_s
-    mapping.map do |cid, info|
-      next unless info[:parent_id].to_s == pid
-      cf = CustomField.find_by(id: cid.to_i)
+    pid     = params[:parent_id].to_s
+    pval    = params[:parent_value].to_s
+    childs  = mapping.select { |_, info| info[:parent_id].to_s == pid }
+    ids     = childs.keys.map(&:to_i)
+    fields  = CustomField.where(id: ids).index_by(&:id)
+
+    childs.map do |cid, info|
+      cf = fields[cid.to_i]
       next unless cf
+
+      next unless issues_all? do |issue|
+        begin
+          issue.available_custom_fields.include?(cf) &&
+            RedmineDependingCustomFields::CustomFieldVisibility.visible_to_user?(cf, issue.project, User.current)
+        rescue NoMethodError
+          true
+        end
+      end
 
       allowed_by_parent = Array(info[:map][pval]).map(&:to_s)
       allowed = cf.possible_values_options(@issues).map do |o|
@@ -109,8 +135,21 @@ class ContextMenuWizardController < ApplicationController
   end
 
   def check_edit_permission
-    unless @issues.all? { |issue| issue.visible? && issue.editable?(User.current) }
-      deny_access
+    deny_access unless issues_all? do |issue|
+      visible = !issue.respond_to?(:visible?) || issue.visible?
+      editable = !issue.respond_to?(:editable?) || issue.editable?(User.current)
+      visible && editable
     end
+  end
+
+  def issues_all?
+    result = true
+    @issues.find_each do |issue|
+      unless yield(issue)
+        result = false
+        break
+      end
+    end
+    result
   end
 end

@@ -1,7 +1,7 @@
-require 'rails_helper'
+require_relative '../rails_helper'
 
 RSpec.describe RedmineDependingCustomFields::Hooks::ContextMenuHook do
-  let(:hook) { described_class.new }
+  let(:hook) { described_class.send(:new) }
   let(:view_context) { double('view', extend: nil) }
   let(:controller) { double('controller', view_context: view_context, current_user: user) }
   let(:user) { instance_double(User) }
@@ -12,7 +12,7 @@ RSpec.describe RedmineDependingCustomFields::Hooks::ContextMenuHook do
   let(:issues) { [issue1, issue2] }
 
   before do
-    allow(ParentMenuBuilder).to receive(:build).and_return([])
+    allow(RedmineDependingCustomFields::ParentMenuBuilder).to receive(:build).and_return([])
     allow(Rails.cache).to receive(:fetch).and_return({})
   end
 

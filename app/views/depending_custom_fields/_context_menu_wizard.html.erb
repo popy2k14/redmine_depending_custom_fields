@@ -1,18 +1,32 @@
 <%# frozen_string_literal: true %>
-<% parent_cf = CustomField.find(parent[:id]) %>
+<% parent_id = parent[:id].to_i %>
 <% issue_ids = Array(issues).map(&:id) %>
 <%
   children_by_parent = mapping.group_by { |cid, info| info[:parent_id].to_i }
                               .transform_values { |arr| arr.map { |cid, _| cid.to_i } }
-  field_ids = ([parent_cf.id] + mapping.keys.map(&:to_i) + mapping.values.map { |v| v[:parent_id].to_i }).uniq
-  fields_by_id = CustomField.where(id: field_ids).index_by(&:id)
+  field_ids = ([parent_id] + mapping.keys.map(&:to_i) + mapping.values.map { |v| v[:parent_id].to_i if v[:parent_id] }.compact).uniq
+
+  fields_by_id ||= CustomField.where(id: field_ids).index_by(&:id)
+  parent_cf = fields_by_id[parent_id]
 
   fields_hierarchy = []
   current = [parent_cf.id]
   while current.any?
-    fields = current.map { |cid| fields_by_id[cid] }.compact
-    fields_hierarchy << fields
-    current = current.flat_map { |cid| children_by_parent[cid] || [] }
+    next_ids = []
+    fields = current.map { |cid| fields_by_id[cid] }.compact.select do |cf|
+      visible = issues.all? do |issue|
+        begin
+          issue.available_custom_fields.include?(cf) &&
+            RedmineDependingCustomFields::CustomFieldVisibility.visible_to_user?(cf, issue.project, User.current)
+        rescue NoMethodError
+          true
+        end
+      end
+      next_ids += (children_by_parent[cf.id] || []) if visible
+      visible
+    end
+    fields_hierarchy << fields if fields.any?
+    current = next_ids
   end
 %>
 <li class="folder cf-parent"

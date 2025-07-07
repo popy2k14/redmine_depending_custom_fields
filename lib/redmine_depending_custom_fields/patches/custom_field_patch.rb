@@ -1,3 +1,5 @@
+require_dependency 'custom_field'
+
 module RedmineDependingCustomFields
   module Patches
     module CustomFieldPatch
@@ -15,5 +17,3 @@ module RedmineDependingCustomFields
     end
   end
 end
-
-CustomField.prepend RedmineDependingCustomFields::Patches::CustomFieldPatch

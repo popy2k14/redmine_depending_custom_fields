@@ -1,4 +1,4 @@
-require 'rails_helper'
+require_relative '../rails_helper'
 
 RSpec.describe 'CustomField cache clearing callback' do
   before do
@@ -13,17 +13,17 @@ RSpec.describe 'CustomField cache clearing callback' do
     end
   end
 
-  it 'clears caches for dependable list field' do
+  it 'clears caches for depending list field' do
     cf = dummy_class.new
-    cf.format = RedmineDependingCustomFields::DependableListFormat.new
+    cf.format = RedmineDependingCustomFields::DependingListFormat.instance
     cf.send(:dispatch_after_custom_field_save)
     expect(Rails.cache).to have_received(:delete).with('depending_custom_fields/mapping')
     expect(Rails.cache).to have_received(:delete_matched).with('dcf/*')
   end
 
-  it 'clears caches for dependable enumeration field' do
+  it 'clears caches for depending enumeration field' do
     cf = dummy_class.new
-    cf.format = RedmineDependingCustomFields::DependableEnumerationFormat.new
+    cf.format = RedmineDependingCustomFields::DependingEnumerationFormat.instance
     cf.send(:dispatch_after_custom_field_save)
     expect(Rails.cache).to have_received(:delete).with('depending_custom_fields/mapping')
     expect(Rails.cache).to have_received(:delete_matched).with('dcf/*')

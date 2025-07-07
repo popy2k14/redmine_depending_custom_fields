@@ -2,7 +2,7 @@
 
 **ATTENTION: ALPHA STAGE**
 
-This plugin provides depending / cascading custom field formats for Redmine that can be toggled via the plugin settings. Two new field formats (*List (dependable)* and *Key/Value list (dependable)*) are introduced in addition to the *Extended user* field format with options for group-based filtering and visibility of active, registered or inactive users.
+This plugin provides depending / cascading custom field formats for Redmine. Two new field formats (*List (depending)* and *Key/Value list (depending)*) are introduced in addition to the *Extended user* field format with options for group-based filtering and visibility of active, registered or inactive users.
 
 ## Features
 
@@ -13,9 +13,9 @@ This plugin provides depending / cascading custom field formats for Redmine that
    - Users are listed under headers for active, registered and inactive status in filters
 2. `Depending` or `Cascading` custom fields
    - Both for `lists` as `key/value` pairs
-   - New formats `List (dependable)` and `Key/Value list (dependable)` allow defining parent/child relationships
-   - Parent lists can depend on other lists or dependable lists of the same object type
-   - Key/value lists can depend on enumerations or dependable key/value lists of the same object type
+   - New formats `List (depending)` and `Key/Value list (depending)` allow defining parent/child relationships
+   - Parent lists can depend on other lists or depending lists of the same object type
+   - Key/value lists can depend on enumerations or depending key/value lists of the same object type
    - `Parent` and `Child` relationships between fields
    - Relation between `Parent` and `Child` values is configurable in a matrix
    - Child fields include a blank option to deselect and are disabled until a
@@ -61,23 +61,23 @@ The plugin is tested with Redmine **5.1** and should work with later versions.
 Tests can be run using:
 
 ```bash
-bundle exec rake test
+RAILS_ENV=test bundle exec rspec plugins/redmine_depending_custom_fields/spec
 ```
 
 ## API
 
 The plugin exposes a JSON API to read and modify the configuration of list,
-enumeration and dependable custom fields. Each endpoint returns all attributes
+enumeration and depending custom fields. Each endpoint returns all attributes
 you normally configure in the Redmine GUI, such as name, description, required
 flag, visibility, trackers and projects as well as the dependency mapping.
 The following endpoints are available:
 
-- `GET /dependable_custom_fields` – list supported custom fields.
-- `GET /dependable_custom_fields/:id` – show a single custom field with its
+- `GET /depending_custom_fields` – list supported custom fields.
+- `GET /depending_custom_fields/:id` – show a single custom field with its
   dependencies.
-- `POST /dependable_custom_fields` – create a new custom field.
-- `PUT /dependable_custom_fields/:id` – update an existing custom field.
-- `DELETE /dependable_custom_fields/:id` – remove a custom field.
+- `POST /depending_custom_fields` – create a new custom field.
+- `PUT /depending_custom_fields/:id` – update an existing custom field.
+- `DELETE /depending_custom_fields/:id` – remove a custom field.
 
 Responses contain the custom field attributes listed above including
 `parent_custom_field_id`, the possible values and the mapping of allowed child
@@ -98,10 +98,10 @@ List all configured fields:
 
 ```bash
 curl -H "X-Redmine-API-Key: <TOKEN>" \
-  https://redmine.example.com/dependable_custom_fields.json
+  https://redmine.example.com/depending_custom_fields.json
 ```
 
-Create a new dependable list field linked to a parent field with id `5`:
+Create a new depending list field linked to a parent field with id `5`:
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
@@ -110,7 +110,7 @@ curl -X POST -H "Content-Type: application/json" \
     "custom_field": {
       "name": "Subtype",
       "type": "IssueCustomField",
-      "field_format": "dependable_list",
+      "field_format": "depending_list",
       "possible_values": ["Minor", "Major"],
       "is_required": true,
       "is_filter": true,
@@ -127,7 +127,7 @@ curl -X POST -H "Content-Type: application/json" \
       "value_dependencies": {"1": ["Minor"], "2": ["Major"]}
     }
   }' \
-  https://redmine.example.com/dependable_custom_fields.json
+  https://redmine.example.com/depending_custom_fields.json
 ```
 
 Update dependencies for an existing field:
@@ -141,19 +141,36 @@ curl -X PUT -H "Content-Type: application/json" \
       "value_dependencies": {"1": ["Bug", "Feature"]}
     }
   }' \
-  https://redmine.example.com/dependable_custom_fields/7.json
+  https://redmine.example.com/depending_custom_fields/7.json
 ```
 
-### Dependable enumeration example
+Update dependencies and add a value (Critical)
 
-Fetch a dependable enumeration field:
+```bash
+curl -X PUT -H "Content-Type: application/json" \
+  -H "X-Redmine-API-Key: <TOKEN>" \
+  -d '{
+    "custom_field": {
+      "possible_values": ["Minor", "Major", "Critical"],
+      "value_dependencies": {
+        "Parent value 1": ["Minor"],
+        "Parent value 2": ["Major"]
+      }
+    }
+  }' \
+  https://redmine.example.com/depending_custom_fields/7.json
+```
+
+### Depending enumeration example
+
+Fetch a depending enumeration field:
 
 ```bash
 curl -H "X-Redmine-API-Key: <TOKEN>" \
-  https://redmine.example.com/dependable_custom_fields/9.json
+  https://redmine.example.com/depending_custom_fields/9.json
 ```
 
-Create a new dependable enumeration field that depends on a parent field with id `8`.
+Create a new depending enumeration field that depends on a parent field with id `8`.
 Enumeration values are passed using the `enumerations` array. Each item can
 include a `name` and `position` and will be created for the field. When updating
 existing values, include their `id` and optionally `_destroy: true` to remove
@@ -167,7 +184,7 @@ curl -X POST -H "Content-Type: application/json" \
     "custom_field": {
       "name": "Detailed activity",
       "type": "TimeEntryCustomField",
-      "field_format": "dependable_enumeration",
+      "field_format": "depending_enumeration",
       "enumerations": [
         {"name": "Research", "position": 1},
         {"name": "Testing", "position": 2}
@@ -185,7 +202,7 @@ curl -X POST -H "Content-Type: application/json" \
       "value_dependencies": {"1": ["2"]}
     }
   }' \
-  https://redmine.example.com/dependable_custom_fields.json
+  https://redmine.example.com/depending_custom_fields.json
 ```
 
 Update the dependencies of that enumeration field:
@@ -203,8 +220,12 @@ curl -X PUT -H "Content-Type: application/json" \
       "value_dependencies": {"1": ["2"]}
     }
   }' \
-  https://redmine.example.com/dependable_custom_fields/9.json
+  https://redmine.example.com/depending_custom_fields/9.json
 ```
+
+## Thank you
+
+Many thanks to ChatGPT for helping to create this plugin.
 
 ## License
 

@@ -23,7 +23,7 @@ module RedmineDependingCustomFields
     private_constant :BOOLEAN
 
     def boolean(value)
-      BOOLEAN.cast(value)
+      BOOLEAN.cast(value) ? true : false
     end
 
     def possible_values_options(custom_field, object = nil)
@@ -32,24 +32,26 @@ module RedmineDependingCustomFields
       show_registered = boolean(custom_field.show_registered)
       show_locked     = boolean(custom_field.show_locked)
 
-      active_users     = show_active ? users.where(status: User::STATUS_ACTIVE) : User.none
-      registered_users = show_registered ? users.where(status: User::STATUS_REGISTERED) : User.none
-      inactive_users   = show_locked ? users.where(status: User::STATUS_LOCKED) : User.none
+      statuses = []
+      statuses << User::STATUS_ACTIVE if show_active
+      statuses << User::STATUS_REGISTERED if show_registered
+      statuses << User::STATUS_LOCKED if show_locked
 
-      visible_users = active_users.to_a + registered_users.to_a + inactive_users.to_a
+      visible_users = statuses.any? ? users.where(status: statuses).to_a : []
+      users_by_status = visible_users.group_by(&:status)
 
       options = []
-      if active_users.any?
-        options << [::I18n.t(:status_active), '', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
-        options += active_users.sorted.map { |u| [u.name, u.id.to_s] }
+      if show_active && users_by_status[User::STATUS_ACTIVE].present?
+        options << [::I18n.t(:status_active), '__group_active__', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
+        options += users_by_status[User::STATUS_ACTIVE].sort_by(&:name).map { |u| [u.name, u.id.to_s] }
       end
-      if registered_users.any?
-        options << [::I18n.t(:status_registered), '', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
-        options += registered_users.sorted.map { |u| [u.name, u.id.to_s] }
+      if show_registered && users_by_status[User::STATUS_REGISTERED].present?
+        options << [::I18n.t(:status_registered), '__group_registered__', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
+        options += users_by_status[User::STATUS_REGISTERED].sort_by(&:name).map { |u| [u.name, u.id.to_s] }
       end
-      if inactive_users.any?
-        options << [::I18n.t(:status_locked), '', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
-        options += inactive_users.sorted.map { |u| [u.name, u.id.to_s] }
+      if show_locked && users_by_status[User::STATUS_LOCKED].present?
+        options << [::I18n.t(:status_locked), '__group_locked__', {disabled: true, class: 'option-group', style: 'font-weight:bold;'}]
+        options += users_by_status[User::STATUS_LOCKED].sort_by(&:name).map { |u| [u.name, u.id.to_s] }
       end
       options = [["<< #{::I18n.t(:label_me)} >>", User.current.id]] + options if visible_users.include?(User.current)
       options
@@ -61,18 +63,27 @@ module RedmineDependingCustomFields
       show_registered = boolean(custom_field.show_registered)
       show_locked     = boolean(custom_field.show_locked)
 
-      options = []
-      options += users.where(status: User::STATUS_ACTIVE).sorted.map { |u| [u.name, u.id.to_s, ::I18n.t('status_active')] } if show_active
-      options += users.where(status: User::STATUS_REGISTERED).sorted.map { |u| [u.name, u.id.to_s, ::I18n.t('status_registered')] } if show_registered
-      options += users.where(status: User::STATUS_LOCKED).sorted.map { |u| [u.name, u.id.to_s, ::I18n.t('status_locked')] } if show_locked
+      statuses = []
+      statuses << User::STATUS_ACTIVE if show_active
+      statuses << User::STATUS_REGISTERED if show_registered
+      statuses << User::STATUS_LOCKED if show_locked
 
-      visible_users = []
-      visible_users += users.where(status: User::STATUS_ACTIVE).to_a if show_active
-      visible_users += users.where(status: User::STATUS_REGISTERED).to_a if show_registered
-      visible_users += users.where(status: User::STATUS_LOCKED).to_a if show_locked
-      if visible_users.include?(User.current)
-        options.unshift ["<< #{::I18n.t(:label_me)} >>", User.current.id.to_s]
+      visible_users = statuses.any? ? users.where(status: statuses).sorted.to_a : []
+      users_by_status = visible_users.group_by(&:status)
+
+      options = []
+      if show_active && users_by_status[User::STATUS_ACTIVE].present?
+        options += users_by_status[User::STATUS_ACTIVE].map { |u| [u.name, u.id.to_s, ::I18n.t('status_active')] }
       end
+      if show_registered && users_by_status[User::STATUS_REGISTERED].present?
+        options += users_by_status[User::STATUS_REGISTERED].map { |u| [u.name, u.id.to_s, ::I18n.t('status_registered')] }
+      end
+      if show_locked && users_by_status[User::STATUS_LOCKED].present?
+        options += users_by_status[User::STATUS_LOCKED].map { |u| [u.name, u.id.to_s, ::I18n.t('status_locked')] }
+      end
+
+      options.reject! { |opt| opt[1].blank? }
+      options.unshift ["<< #{::I18n.t(:label_me)} >>", User.current.id.to_s] if visible_users.include?(User.current)
       options
     end
 

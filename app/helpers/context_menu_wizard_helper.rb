@@ -1,7 +1,8 @@
 module ContextMenuWizardHelper
   def intersect_allowed_values(cf, issues)
     issues.inject(nil) do |memo, issue|
-      vals = cf.possible_values_options(issue).map(&:last)
+      options = cf.possible_values_options(issue)
+      vals = options.reject { |o| o.is_a?(Array) && o[2].is_a?(Hash) && o[2][:class] == 'option-group' }.map(&:last)
       memo ? (memo & vals) : vals
     end
   end

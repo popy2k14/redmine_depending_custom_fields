@@ -1,4 +1,4 @@
-require 'rails_helper'
+require_relative '../rails_helper'
 
 RSpec.describe RedmineDependingCustomFields::ParentDetector do
   let(:parent1) { instance_double(CustomField, id: 10, position: 1) }
@@ -13,6 +13,10 @@ RSpec.describe RedmineDependingCustomFields::ParentDetector do
       '32' => { parent_id: '12', map: {} }
     })
     allow(CustomField).to receive(:where).and_return([parent1, parent2])
+    allow(parent1).to receive(:visible?).and_return(true)
+    allow(parent1).to receive(:role_ids).and_return([])
+    allow(parent2).to receive(:visible?).and_return(true)
+    allow(parent2).to receive(:role_ids).and_return([])
   end
 
   it 'returns parent fields ordered by position' do
@@ -24,5 +28,17 @@ RSpec.describe RedmineDependingCustomFields::ParentDetector do
     issue2 = instance_double(Issue, project: project, available_custom_fields: [parent1])
     result = described_class.for_issues([issue1, issue2])
     expect(result).to eq([parent1])
+  end
+
+  it 'excludes fields not visible to the user' do
+    user = instance_double(User, admin?: false)
+    allow(User).to receive(:current).and_return(user)
+    allow(user).to receive(:roles_for_project).with(project).and_return([])
+
+    allow(parent1).to receive(:visible?).and_return(false)
+    allow(parent1).to receive(:role_ids).and_return([1])
+
+    result = described_class.for_issues([issue1])
+    expect(result).to eq([parent2])
   end
 end

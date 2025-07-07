@@ -4,8 +4,8 @@ module RedmineDependingCustomFields
     PARENT_FORMATS = [
       'list',
       'enumeration',
-      RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_LIST,
-      RedmineDependingCustomFields::FIELD_FORMAT_DEPENDABLE_ENUMERATION
+      RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+      RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_ENUMERATION
     ].freeze
 
     def self.for_issues(issues)
@@ -22,10 +22,12 @@ module RedmineDependingCustomFields
 
       parents = CustomField.where(id: parent_ids, field_format: PARENT_FORMATS)
 
+      user = User.current
       parents = parents.select do |cf|
         issues.all? do |issue|
           begin
-            issue.available_custom_fields.include?(cf)
+            issue.available_custom_fields.include?(cf) &&
+              RedmineDependingCustomFields::CustomFieldVisibility.visible_to_user?(cf, issue.project, user)
           rescue NoMethodError
             true
           end

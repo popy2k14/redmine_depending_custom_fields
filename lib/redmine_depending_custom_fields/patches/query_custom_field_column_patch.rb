@@ -1,3 +1,5 @@
+require_dependency 'query'
+
 module RedmineDependingCustomFields
   module Patches
     module QueryCustomFieldColumnPatch
@@ -13,5 +15,3 @@ module RedmineDependingCustomFields
     end
   end
 end
-
-QueryCustomFieldColumn.prepend RedmineDependingCustomFields::Patches::QueryCustomFieldColumnPatch

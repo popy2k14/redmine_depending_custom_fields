@@ -1,4 +1,4 @@
-require 'rails_helper'
+require_relative '../rails_helper'
 
 RSpec.describe ContextMenuWizardController, type: :controller do
   describe '#options' do
@@ -75,6 +75,57 @@ RSpec.describe ContextMenuWizardController, type: :controller do
 
       expect(issue1).to have_received(:custom_field_values=).with('5' => 'bar')
       expect(issue2).to have_received(:custom_field_values=).with('5' => 'bar')
+    end
+
+    context 'when user lacks permission' do
+      before do
+        allow(issue1).to receive(:visible?).and_return(false)
+      end
+
+      it 'denies access' do
+        post :save, params: { issue_ids: '1', fieldId: 1, value: '42' }
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+  end
+
+  describe 'query count' do
+    let(:issues_relation) { double('relation') }
+
+    before do
+      controller.instance_variable_set(:@issues, issues_relation)
+      allow(controller).to receive(:intersect_allowed_values).and_return([])
+    end
+
+    it 'loads parent custom fields with a single query' do
+      mapping = {
+        '10' => { parent_id: '2', map: {} },
+        '11' => { parent_id: '3', map: {} }
+      }
+      allow(CustomField).to receive(:where).and_return([])
+
+      recorder = ActiveRecord::QueryRecorder.new do
+        controller.send(:parent_options, mapping)
+      end
+
+      expect(recorder.count).to eq(1)
+    end
+
+    it 'loads child custom fields with a single query' do
+      mapping = {
+        '20' => { parent_id: '5', map: {} },
+        '21' => { parent_id: '6', map: {} }
+      }
+      controller.params[:parent_id] = '5'
+      controller.params[:parent_value] = 'a'
+      allow(CustomField).to receive(:where).and_return([])
+      allow_any_instance_of(CustomField).to receive(:possible_values_options).and_return([])
+
+      recorder = ActiveRecord::QueryRecorder.new do
+        controller.send(:child_options, mapping)
+      end
+
+      expect(recorder.count).to eq(1)
     end
   end
 end

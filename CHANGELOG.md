@@ -6,4 +6,10 @@
 
 ## 0.0.2
 
-* Added context menu support
+* Add context menu support
+* Improve performance of custom field queries
+* Refactor internals for better consistency and naming
+* Replace Minitest with RSpec
+* Add full test coverage including API and integration specs
+* Improve visibility filtering and admin restrictions in API
+* General code cleanup and optimizations

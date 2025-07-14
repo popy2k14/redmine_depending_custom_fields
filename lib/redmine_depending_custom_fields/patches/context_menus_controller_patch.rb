@@ -1,5 +1,9 @@
 require_dependency 'context_menus_controller'
 
+# Patch that removes depending custom fields from the default issue context menu
+# and cleans up grouped user options. It delegates to MappingBuilder to know
+# which fields to hide.
+
 module RedmineDependingCustomFields
   module Patches
     module ContextMenusControllerPatch

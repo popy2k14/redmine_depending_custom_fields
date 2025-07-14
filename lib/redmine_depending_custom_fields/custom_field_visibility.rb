@@ -1,3 +1,11 @@
+# Helper methods to determine whether a custom field is visible for a
+# given user. The logic mirrors Redmine's own checks but falls back to
+# `true` when required associations are missing.
+#
+# Example:
+#   if CustomFieldVisibility.visible_to_user?(cf, project, current_user)
+#     # show field
+#   end
 module RedmineDependingCustomFields
   module CustomFieldVisibility
     module_function

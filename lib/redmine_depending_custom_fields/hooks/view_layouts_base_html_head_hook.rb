@@ -1,3 +1,5 @@
+# Hook that loads front-end assets for depending custom fields and exposes the
+# dependency mapping via JavaScript. Inserted into the HTML head of every page.
 module RedmineDependingCustomFields
   module Hooks
     class ViewLayoutsBaseHtmlHeadHook < Redmine::Hook::ViewListener

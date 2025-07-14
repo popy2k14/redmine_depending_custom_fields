@@ -1,3 +1,13 @@
+# Builds a cached mapping of depending custom fields and their parent
+# relationships. The structure is used by hooks and JavaScript to decide which
+# fields to display.
+#
+# The returned hash is keyed by the child field id as a string with the
+# following structure:
+#   {
+#     '31' => { parent_id: '10', map: { 'a' => ['1'] } },
+#     '32' => { parent_id: '11', map: { 'b' => ['3'] } }
+#   }
 module RedmineDependingCustomFields
   class MappingBuilder
     def self.build

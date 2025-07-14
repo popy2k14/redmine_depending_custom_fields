@@ -1,5 +1,9 @@
 require_dependency 'custom_field'
 
+# Extension for CustomField that triggers a callback on the field format after
+# the record is saved. This allows formats to invalidate caches when their
+# configuration changes.
+
 module RedmineDependingCustomFields
   module Patches
     module CustomFieldPatch

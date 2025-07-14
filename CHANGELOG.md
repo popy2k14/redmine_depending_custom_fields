@@ -16,4 +16,5 @@
 
 ## 0.0.3
 
+* Handle depending fields via Redmine mail handler
 * Invalid combinations submitted via API or email are rejected server-side

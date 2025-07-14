@@ -223,6 +223,17 @@ curl -X PUT -H "Content-Type: application/json" \
   }' \
   https://redmine.example.com/depending_custom_fields/9.json
 ```
+## Using depending fields via incoming email
+
+Example snippet showing a parent and child custom field:
+
+```
+Parent Field: Hardware
+Child Field: Keyboard
+```
+
+Invalid combinations are rejected just like when using the API.
+
 
 ## Thank you
 

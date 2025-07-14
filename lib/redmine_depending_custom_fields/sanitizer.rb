@@ -1,3 +1,5 @@
+# Simple helpers for cleaning up dependency hashes coming from forms or the
+# API. Values and keys are converted to strings and blank entries are removed.
 module RedmineDependingCustomFields
   module Sanitizer
     def self.sanitize_dependencies(hash)

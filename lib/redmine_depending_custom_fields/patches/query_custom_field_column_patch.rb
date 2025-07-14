@@ -1,5 +1,9 @@
 require_dependency 'query'
 
+# Patch for `Query::CustomFieldColumn` that ensures custom fields provide
+# a proper SQL order statement when available. This keeps sorting working even
+# for fields with special formatting.
+
 module RedmineDependingCustomFields
   module Patches
     module QueryCustomFieldColumnPatch

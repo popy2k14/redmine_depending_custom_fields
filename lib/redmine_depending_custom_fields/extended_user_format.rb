@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Field format that builds on Redmine's user custom field but adds
+# filtering options. Administrators can restrict the selectable users by
+# group membership, status and whether administrators should appear.
+
 module RedmineDependingCustomFields
   class ExtendedUserFormat < Redmine::FieldFormat::UserFormat
     add 'extended_user'

@@ -13,3 +13,7 @@
 * Add full test coverage including API and integration specs
 * Improve visibility filtering and admin restrictions in API
 * General code cleanup and optimizations
+
+## 0.0.3
+
+* Invalid combinations submitted via API or email are rejected server-side

@@ -41,7 +41,8 @@ RSpec.describe "DependingCustomFields API", type: :request do
                     "projects" => kind_of(Array),
                     "roles" => kind_of(Array),
                     "parent_custom_field_id" => be_nil.or(be_kind_of(Integer)),
-                    "value_dependencies" => be_nil.or(be_kind_of(Hash))
+                    "value_dependencies" => be_nil.or(be_kind_of(Hash)),
+                    "default_value_dependencies" => be_nil.or(be_kind_of(Hash))
                   )
   end
 
@@ -95,6 +96,23 @@ RSpec.describe "DependingCustomFields API", type: :request do
       }.not_to change { CustomField.count }
 
       expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it "allows setting a default value when no parent is set" do
+      payload = {
+        custom_field: {
+          name: "with default",
+          type: "IssueCustomField",
+          field_format: RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+          possible_values: ["A", "B"],
+          default_value: "B"
+        }
+      }
+
+      post "/depending_custom_fields.json", params: payload
+      expect(response).to have_http_status(:created)
+      body = JSON.parse(response.body)
+      expect(body["default_value"]).to eq("B")
     end
   end
 

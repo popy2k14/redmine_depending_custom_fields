@@ -10,7 +10,7 @@ module RedmineDependingCustomFields
   class DependingEnumerationFormat < Redmine::FieldFormat::EnumerationFormat
     add 'depending_enumeration'
     self.form_partial = 'custom_fields/formats/depending_enumeration'
-    field_attributes :parent_custom_field_id, :value_dependencies
+    field_attributes :parent_custom_field_id, :value_dependencies, :default_value_dependencies
 
     def label
       :label_depending_enumeration
@@ -23,8 +23,10 @@ module RedmineDependingCustomFields
                                      type: custom_field.type,
                                      field_format: ['enumeration', RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_ENUMERATION])
         custom_field.parent_custom_field_id = parent&.id
+        custom_field.default_value = nil if parent
       end
       custom_field.value_dependencies = RedmineDependingCustomFields::Sanitizer.sanitize_dependencies(custom_field.value_dependencies)
+      custom_field.default_value_dependencies = RedmineDependingCustomFields::Sanitizer.sanitize_default_dependencies(custom_field.default_value_dependencies)
     end
 
     # lib/redmine_depending_custom_fields/depending_list_format.rb

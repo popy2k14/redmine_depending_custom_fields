@@ -21,7 +21,8 @@ CustomField.safe_attributes(
   'show_registered',
   'show_locked',
   'parent_custom_field_id',
-  'value_dependencies'
+  'value_dependencies',
+  'default_value_dependencies'
 )
 
 QueryCustomFieldColumn.prepend RedmineDependingCustomFields::Patches::QueryCustomFieldColumnPatch

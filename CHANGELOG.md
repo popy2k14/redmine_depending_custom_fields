@@ -23,4 +23,4 @@
 ## 0.0.4
 
 * Improve Redmine 6.0 compatibility
-
+* Make default values configurable with parent / child relations

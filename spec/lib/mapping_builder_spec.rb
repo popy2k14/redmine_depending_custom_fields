@@ -9,6 +9,11 @@ RSpec.describe RedmineDependingCustomFields::MappingBuilder do
         value_dependencies: {
           'a' => ['1', '', nil],
           '' => ['2']
+        },
+        default_value_dependencies: {
+          'a' => ['1', '', nil],
+          '' => '',
+          nil => '2'
         }
       )
       cf2 = build_custom_field(
@@ -17,12 +22,17 @@ RSpec.describe RedmineDependingCustomFields::MappingBuilder do
         value_dependencies: {
           b: '3',
           c: nil
+        },
+        default_value_dependencies: {
+          b: '3',
+          c: nil
         }
       )
       cf3 = build_custom_field(
         id: 33,
         parent_custom_field_id: nil,
-        value_dependencies: { 'd' => ['4'] }
+        value_dependencies: { 'd' => ['4'] },
+        default_value_dependencies: { 'd' => '4' }
       )
 
       allow(CustomField).to receive(:where).and_return([cf1, cf2, cf3])
@@ -30,8 +40,8 @@ RSpec.describe RedmineDependingCustomFields::MappingBuilder do
       result = described_class.build
 
       expect(result).to eq(
-        '31' => { parent_id: '10', map: { 'a' => ['1'] } },
-        '32' => { parent_id: '11', map: { 'b' => ['3'] } }
+        '31' => { parent_id: '10', map: { 'a' => ['1'] }, defaults: { 'a' => ['1'] } },
+        '32' => { parent_id: '11', map: { 'b' => ['3'] }, defaults: { 'b' => '3' } }
       )
     end
   end

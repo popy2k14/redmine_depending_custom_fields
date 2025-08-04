@@ -119,6 +119,7 @@ class DependingCustomFieldsApiController < ApplicationController
       :parent_custom_field_id,
       possible_values: [],
       value_dependencies: {},
+      default_value_dependencies: {},
       enumerations: [:id, :name, :position, :_destroy, :active],
       tracker_ids: [], project_ids: [], role_ids: []
     )
@@ -155,7 +156,8 @@ class DependingCustomFieldsApiController < ApplicationController
       projects: projects.map { |p| { id: p.id, name: p.name } },
       roles: roles.map { |r| { id: r.id, name: r.name } },
       parent_custom_field_id: cf.respond_to?(:parent_custom_field_id) ? cf.parent_custom_field_id : nil,
-      value_dependencies: cf.respond_to?(:value_dependencies) ? cf.value_dependencies : nil
+      value_dependencies: cf.respond_to?(:value_dependencies) ? cf.value_dependencies : nil,
+      default_value_dependencies: cf.respond_to?(:default_value_dependencies) ? cf.default_value_dependencies : nil
     }
   end
 

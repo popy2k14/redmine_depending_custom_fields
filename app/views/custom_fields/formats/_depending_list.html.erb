@@ -2,7 +2,9 @@
   <%= f.text_area :possible_values, :value => @custom_field.possible_values.to_a.join("\n"), :rows => 15, :required => true %>
   <em class="info"><%= l(:text_custom_field_possible_values_info) %></em>
 </p>
-<p><%= f.text_field(:default_value) %></p>
+<% if @custom_field.parent_custom_field_id.blank? %>
+  <p><%= f.text_field(:default_value) %></p>
+<% end %>
 <p><%= f.text_field :url_pattern, :size => 50, :label => :label_link_values_to %></p>
 <p>
   <%= f.select :parent_custom_field_id,
@@ -16,6 +18,8 @@
 <% if @custom_field.parent_custom_field_id.present? %>
   <% parent_cf = CustomField.find_by(id: @custom_field.parent_custom_field_id) %>
   <%= render partial: 'custom_fields/formats/dependencies_matrix',
+             locals: {parent_field: parent_cf, custom_field: @custom_field} %>
+  <%= render partial: 'custom_fields/formats/default_dependencies',
              locals: {parent_field: parent_cf, custom_field: @custom_field} %>
 <% end %>
 <p><%= edit_tag_style_tag f %></p>

@@ -89,7 +89,8 @@ values per parent option. Parameters use the same types as in Redmine:
   to restrict visibility to specific roles)
 - arrays of integers for `tracker_ids`, `project_ids` and `role_ids`
 - arrays of strings for `possible_values`
-- hashes for `value_dependencies`
+- `default_value` when no `parent_custom_field_id` is set
+- hashes for `value_dependencies` and `default_value_dependencies`
 - enumeration definitions in the `enumerations` array when using enumeration
   fields
 
@@ -101,6 +102,25 @@ List all configured fields:
 curl -H "X-Redmine-API-Key: <TOKEN>" \
   https://redmine.example.com/depending_custom_fields.json
 ```
+
+Create a depending list field without a parent:
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Redmine-API-Key: <TOKEN>" \
+  -d '{
+    "custom_field": {
+      "name": "Severity",
+      "type": "IssueCustomField",
+      "field_format": "depending_list",
+      "possible_values": ["Minor", "Major"],
+      "default_value": "Minor"
+    }
+  }' \
+  https://redmine.example.com/depending_custom_fields.json
+```
+
+When a parent field is configured, defaults can be specified per parent value using `default_value_dependencies`:
 
 Create a new depending list field linked to a parent field with id `5`:
 
@@ -118,14 +138,14 @@ curl -X POST -H "Content-Type: application/json" \
       "searchable": true,
       "visible": true,
       "multiple": false,
-      "default_value": "Minor",
       "url_pattern": "https://tracker.example.com/%value%",
       "edit_tag_style": "select",
       "tracker_ids": [1,2],
       "project_ids": [3],
       "role_ids": [4,5],
       "parent_custom_field_id": 5,
-      "value_dependencies": {"1": ["Minor"], "2": ["Major"]}
+      "value_dependencies": {"1": ["Minor"], "2": ["Major"]},
+      "default_value_dependencies": {"1": "Minor", "2": "Major"}
     }
   }' \
   https://redmine.example.com/depending_custom_fields.json
@@ -195,12 +215,12 @@ curl -X POST -H "Content-Type: application/json" \
       "searchable": true,
       "visible": false,
       "multiple": false,
-      "default_value": 1,
       "tracker_ids": [1],
       "project_ids": [3],
       "role_ids": [4,5],
       "parent_custom_field_id": 8,
-      "value_dependencies": {"1": ["2"]}
+      "value_dependencies": {"1": ["2"]},
+      "default_value_dependencies": {"1": 2}
     }
   }' \
   https://redmine.example.com/depending_custom_fields.json

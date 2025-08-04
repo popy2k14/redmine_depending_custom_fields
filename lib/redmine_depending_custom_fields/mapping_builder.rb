@@ -5,8 +5,8 @@
 # The returned hash is keyed by the child field id as a string with the
 # following structure:
 #   {
-#     '31' => { parent_id: '10', map: { 'a' => ['1'] } },
-#     '32' => { parent_id: '11', map: { 'b' => ['3'] } }
+#     '31' => { parent_id: '10', map: { 'a' => ['1'] }, defaults: { 'a' => '1' } },
+#     '32' => { parent_id: '11', map: { 'b' => ['3'] }, defaults: {} }
 #   }
 module RedmineDependingCustomFields
   class MappingBuilder
@@ -21,7 +21,8 @@ module RedmineDependingCustomFields
 
         h[cf.id.to_s] = {
           parent_id: cf.parent_custom_field_id.to_s,
-          map: RedmineDependingCustomFields::Sanitizer.sanitize_dependencies(cf.value_dependencies)
+          map: RedmineDependingCustomFields::Sanitizer.sanitize_dependencies(cf.value_dependencies),
+          defaults: RedmineDependingCustomFields::Sanitizer.sanitize_default_dependencies(cf.default_value_dependencies)
         }
       end
 

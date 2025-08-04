@@ -18,3 +18,9 @@
 
 * Handle depending fields via Redmine mail handler
 * Invalid combinations submitted via API or email are rejected server-side
+* Ensure OWASP compliance (add class name mapping to API controller)
+
+## 0.0.4
+
+* Improve Redmine 6.0 compatibility
+

@@ -45,10 +45,18 @@ end
 require_relative 'support/custom_field_factory'
 
 RSpec.configure do |config|
-  config.fixture_path = File.expand_path('fixtures', __dir__)
-  if config.fixture_path && Dir.exist?(config.fixture_path)
-    config.global_fixtures = Dir[File.join(config.fixture_path, '*.yml')].map { |f| File.basename(f, '.yml').to_sym }
+  fixture_path = File.expand_path('fixtures', __dir__)
+
+  if config.respond_to?(:fixture_paths=)
+    config.fixture_paths = [fixture_path]
+  elsif config.respond_to?(:fixture_path=)
+    config.fixture_path = fixture_path
   end
+
+  if Dir.exist?(fixture_path) && config.respond_to?(:global_fixtures=)
+    config.global_fixtures = Dir[File.join(fixture_path, '*.yml')].map { |f| File.basename(f, '.yml').to_sym }
+  end
+
   config.use_transactional_fixtures = true
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!

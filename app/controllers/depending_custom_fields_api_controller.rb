@@ -9,10 +9,19 @@ class DependingCustomFieldsApiController < ApplicationController
                 .where(field_format: field_formats)
                 .to_a
 
-    preloader = ActiveRecord::Associations::Preloader.new
     %i[enumerations trackers projects roles].each do |assoc|
       with_assoc = records.select { |cf| cf.class.reflect_on_association(assoc) }
-      preloader.preload(with_assoc, assoc) if with_assoc.any?
+      next unless with_assoc.any?
+
+      if ActiveRecord::VERSION::MAJOR >= 7
+        ActiveRecord::Associations::Preloader.new(
+          records: with_assoc,
+          associations: assoc
+        ).call
+      else
+        @preloader ||= ActiveRecord::Associations::Preloader.new
+        @preloader.preload(with_assoc, assoc)
+      end
     end
 
     render json: records.map { |cf| format_custom_field(cf) }

@@ -12,9 +12,9 @@ RSpec.describe RedmineDependingCustomFields::Hooks::ViewLayoutsBaseHtmlHeadHook 
   it 'includes mapping JSON and asset tags' do
     html = hook.view_layouts_base_html_head
     expect(html).to include(mapping.to_json)
-    expect(html).to include('depending_custom_fields.js')
-    expect(html).to include('context_menu_wizard.js')
-    expect(html).to include('depending_custom_fields.css')
+    expect(html).to match(/depending_custom_fields.*\.js/)
+    expect(html).to match(/context_menu_wizard.*\.js/)
+    expect(html).to match(/depending_custom_fields.*\.css/)
   end
 
   it 'assigns mapping to the expected global variable' do

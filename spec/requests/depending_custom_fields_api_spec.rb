@@ -7,16 +7,25 @@ RSpec.describe "DependingCustomFields API", type: :request do
     allow(User).to receive(:current).and_return(User.find(1))
   end
 
+  FIELD_FORMATS = [
+    'list',
+    'enumeration',
+    RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+    RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_ENUMERATION
+  ].freeze
+
+  FIELD_TYPES = (DependingCustomFieldsApiController::CUSTOM_FIELD_CLASS_MAP.keys + ['CustomField', nil]).freeze
+
   def boolean
     satisfy { |v| v == true || v == false }
   end
 
-  def expect_field_structure(cf, name: nil)
+  def expect_field_structure(cf, name: nil, field_format: nil, type: nil)
     expect(cf).to include(
                     "id" => kind_of(Integer),
                     "name" => name || kind_of(String),
-                    "type" => "IssueCustomField",
-                    "field_format" => RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+                    "type" => type || satisfy { |t| FIELD_TYPES.include?(t) },
+                    "field_format" => field_format || satisfy { |v| FIELD_FORMATS.include?(v) },
                     "is_required" => boolean,
                     "is_filter" => boolean,
                     "searchable" => boolean,
@@ -63,7 +72,29 @@ RSpec.describe "DependingCustomFields API", type: :request do
 
       expect(response).to have_http_status(:created)
       cf = JSON.parse(response.body)
-      expect_field_structure(cf, name: "spec field")
+      expect_field_structure(
+        cf,
+        name: "spec field",
+        field_format: RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+        type: "IssueCustomField"
+      )
+    end
+
+    it "rejects an invalid class name" do
+      payload = {
+        custom_field: {
+          name: "spec field",
+          type: "InvalidClass",
+          field_format: RedmineDependingCustomFields::FIELD_FORMAT_DEPENDING_LIST,
+          possible_values: ["A", "B"]
+        }
+      }
+
+      expect {
+        post "/depending_custom_fields.json", params: payload
+      }.not_to change { CustomField.count }
+
+      expect(response).to have_http_status(:unprocessable_entity)
     end
   end
 

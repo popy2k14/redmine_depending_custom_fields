@@ -33,6 +33,14 @@ RSpec.describe DependingCustomFieldsApiController, type: :controller do
       stub_const('IssueCustomField', Class.new)
       stub_const('UserCustomField', Class.new)
       stub_const('TimeEntryCustomField', Class.new)
+      stub_const(
+        'DependingCustomFieldsApiController::CUSTOM_FIELD_CLASS_MAP',
+        {
+          'IssueCustomField' => IssueCustomField,
+          'UserCustomField' => UserCustomField,
+          'TimeEntryCustomField' => TimeEntryCustomField
+        }
+      )
     end
 
     it 'returns the class when allowed for list format' do

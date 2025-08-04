@@ -9,10 +9,11 @@ class DependingCustomFieldsApiController < ApplicationController
                 .where(field_format: field_formats)
                 .to_a
 
-    ActiveRecord::Associations::Preloader.new.preload(
-      records,
-      %i[enumerations trackers projects roles]
-    )
+    preloader = ActiveRecord::Associations::Preloader.new
+    %i[enumerations trackers projects roles].each do |assoc|
+      with_assoc = records.select { |cf| cf.class.reflect_on_association(assoc) }
+      preloader.preload(with_assoc, assoc) if with_assoc.any?
+    end
 
     render json: records.map { |cf| format_custom_field(cf) }
   end
@@ -22,7 +23,12 @@ class DependingCustomFieldsApiController < ApplicationController
   end
 
   def create
-    @custom_field = custom_field_class.new(permitted_params.except(:enumerations))
+    klass = custom_field_class
+    if klass == CustomField && params.dig(:custom_field, :type).present? && params.dig(:custom_field, :type) != 'CustomField'
+      return render json: { errors: ['Invalid custom field type'] }, status: :unprocessable_entity
+    end
+
+    @custom_field = klass.new(permitted_params.except(:enumerations, :type))
     assign_enumerations(@custom_field)
     if @custom_field.save
       render json: format_custom_field(@custom_field), status: :created
@@ -32,7 +38,7 @@ class DependingCustomFieldsApiController < ApplicationController
   end
 
   def update
-    @custom_field.assign_attributes(permitted_params.except(:enumerations))
+    @custom_field.assign_attributes(permitted_params.except(:enumerations, :type))
     assign_enumerations(@custom_field)
 
     if @custom_field.save
@@ -75,6 +81,10 @@ class DependingCustomFieldsApiController < ApplicationController
     TimeEntryActivityCustomField
   ].freeze
 
+  CUSTOM_FIELD_CLASS_MAP = (
+    LIST_CLASS_WHITELIST + ENUM_CLASS_WHITELIST
+  ).uniq.index_with { |name| Object.const_get(name) }.freeze
+
   def custom_field_class
     klass  = params.dig(:custom_field, :type)
     format = params.dig(:custom_field, :field_format)
@@ -88,9 +98,7 @@ class DependingCustomFieldsApiController < ApplicationController
 
     return CustomField if klass.blank? || !allowed.include?(klass)
 
-    klass.constantize
-  rescue NameError
-    CustomField
+    CUSTOM_FIELD_CLASS_MAP.fetch(klass, CustomField)
   end
 
   def permitted_params
@@ -112,10 +120,10 @@ class DependingCustomFieldsApiController < ApplicationController
   end
 
   def format_custom_field(cf)
-    enums    = cf.respond_to?(:enumerations) ? cf.association(:enumerations).target : nil
-    trackers = cf.respond_to?(:trackers) ? cf.association(:trackers).target : []
-    projects = cf.respond_to?(:projects) ? cf.association(:projects).target : []
-    roles    = cf.respond_to?(:roles) ? cf.association(:roles).target : []
+    enums    = cf.class.reflect_on_association(:enumerations) ? cf.association(:enumerations).target : nil
+    trackers = cf.class.reflect_on_association(:trackers) ? cf.association(:trackers).target : []
+    projects = cf.class.reflect_on_association(:projects) ? cf.association(:projects).target : []
+    roles    = cf.class.reflect_on_association(:roles) ? cf.association(:roles).target : []
 
     {
       id: cf.id,

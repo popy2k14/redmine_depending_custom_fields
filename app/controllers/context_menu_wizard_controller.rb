@@ -43,24 +43,20 @@ class ContextMenuWizardController < ApplicationController
   private
 
   def extract_custom_field_values
-    hash = params.dig(:issue, :custom_field_values)
+    permitted = params.permit(:fieldId, :value, issue: { custom_field_values: {} })
+    hash = permitted.dig(:issue, :custom_field_values)
 
-    if hash.blank? && params[:fieldId]
-      val = params[:value]
+    if hash.blank? && permitted[:fieldId]
+      val = permitted[:value]
       return {} if val.to_s.blank?
       val = nil if val.to_s == '__none__'
-      return { params[:fieldId].to_s => val }
+      return { permitted[:fieldId].to_s => val }
     end
 
-    hash = hash.to_unsafe_h if hash.respond_to?(:to_unsafe_h)
     values = {}
-    hash.each do |fid, val|
+    (hash || {}).each do |fid, val|
       next if val.blank?
-      cleaned = if val.is_a?(Array)
-                  val.reject { |v| v.blank? || v == '__none__' }
-                else
-                  val
-                end
+      cleaned = val.is_a?(Array) ? val.reject { |v| v.blank? || v == '__none__' } : val
       next if cleaned.blank?
       cleaned = nil if cleaned == '__none__' || (cleaned.is_a?(Array) && cleaned.empty?)
       values[fid.to_s] = cleaned

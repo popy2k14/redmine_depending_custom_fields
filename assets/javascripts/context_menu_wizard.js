@@ -26,23 +26,19 @@
 
       if(!menu.dataset.dcfInit){
         adjustWidth(menu);
-        menu.dataset.dcfInit = '1';
-      }
-
-
-      menu.querySelectorAll('li.cf-parent').forEach(li => {
-        const a = li.querySelector('a.submenu');
-        const tId = li.dataset.templateId;
-        if(!a || !tId){ return; }
-        if(a.dataset.dcfBound) return;
-        a.dataset.dcfBound = '1';
-        a.addEventListener('click', e => {
+        menu.addEventListener('click', e => {
+          const a = e.target.closest('li.cf-parent > a.submenu');
+          if(!a) return;
+          const li = a.closest('li.cf-parent');
+          const tId = li ? li.dataset.templateId : null;
+          if(!tId) return;
           e.preventDefault(); e.stopPropagation();
           const tmpl = document.getElementById(tId);
           if(!tmpl) return;
           openWizard(menu, tmpl, li);
         });
-      });
+        menu.dataset.dcfInit = '1';
+      }
     }
 
     function adjustWidth(menu){

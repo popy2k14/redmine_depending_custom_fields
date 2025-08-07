@@ -44,91 +44,69 @@
         return container;
     };
 
-    const syncHiddenInputs = (select) => {
-        if (!select.parentNode) return;
+    const removeOldHiddenInputs = (select) => {
         Array.from(select.parentElement.querySelectorAll('input[type="hidden"]')).forEach(input => {
             if (input.name === select.name && !input.closest(`span[data-hidden-for="${select.id}"]`)) {
                 input.remove();
             }
         });
-        const container = ensureHiddenContainer(select);
-        container.innerHTML = '';
-        const values = getValues(select);
+    };
 
-        // Detect bulk/wizard/inline_edit
-        const isBulk = !!select.closest('.cf-wizard, .cf-wizard-form, #context-menu, .bulk-edit, #bulk-edit-form');
-        const isInlineEdit = !!select.closest('#inline_edit_form');
+    const appendHidden = (container, name, value) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        container.appendChild(input);
+    };
 
-        // ---- Unified bulk logic for parent/child ----
-        if (isBulk) {
-            // MULTI: nothing selected => clear (no [])
-            if (select.multiple && values.length === 0) {
-                let baseName = select.name.replace(/\[\]$/, '');
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = baseName;
-                input.value = NONE_VALUE;
-                container.appendChild(input);
-                return;
-            }
-
-            // SINGLE: value == '' => NO input
-            if (!select.multiple && values.length === 1 && values[0] === '') return;
-
-            // MULTI: only __none__ selected => clear (no [])
-            if (select.multiple && values.length === 1 && values[0] === NONE_VALUE) {
-                let baseName = select.name.replace(/\[\]$/, '');
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = baseName;
-                input.value = NONE_VALUE;
-                container.appendChild(input);
-                return;
-            }
-
-            // Normal values: use []
-            values.forEach(v => {
-                if (v !== '') {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = select.name;
-                    input.value = v;
-                    container.appendChild(input);
-                }
-            });
-            return;
-        } else if (isInlineEdit && values.length === 0) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = select.name.replace(/\[\]$/, '');
-            input.value = '';
-            container.appendChild(input);
+    const syncBulkInputs = (select, values, container) => {
+        if (select.multiple && values.length === 0) {
+            appendHidden(container, select.name.replace(/\[\]$/, ''), NONE_VALUE);
             return;
         }
+        if (!select.multiple && values.length === 1 && values[0] === '') return;
+        if (select.multiple && values.length === 1 && values[0] === NONE_VALUE) {
+            appendHidden(container, select.name.replace(/\[\]$/, ''), NONE_VALUE);
+            return;
+        }
+        values.forEach(v => {
+            if (v !== '') appendHidden(container, select.name, v);
+        });
+    };
 
-        // ----- Gewone issue edit -----
+    const syncInlineInputs = (select, container) => {
+        appendHidden(container, select.name.replace(/\[\]$/, ''), '');
+    };
+
+    const syncRegularInputs = (select, values, container) => {
         if (values.length === 0) {
-            // Voor multiselect in gewone edit zonder waarde: veld wissen
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = select.name;
-            input.value = NONE_VALUE;
-            container.appendChild(input);
+            appendHidden(container, select.name, NONE_VALUE);
         } else {
-            values.forEach(v => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = select.name;
-                input.value = v;
-                container.appendChild(input);
-            });
+            values.forEach(v => appendHidden(container, select.name, v));
         }
     };
 
-    const updateChild = (parentSelect, childSelect, mapping, defaults = {}) => {
-        const parentValues = getValues(parentSelect);
-        const hasMapping = parentValues.some(v => Object.prototype.hasOwnProperty.call(mapping, v));
+    const syncHiddenInputs = (select) => {
+        if (!select.parentNode) return;
+        removeOldHiddenInputs(select);
+        const container = ensureHiddenContainer(select);
+        container.innerHTML = '';
+        const values = getValues(select);
+        const isBulk = !!select.closest('.cf-wizard, .cf-wizard-form, #context-menu, .bulk-edit, #bulk-edit-form');
+        const isInlineEdit = !!select.closest('#inline_edit_form');
 
+        if (isBulk) {
+            syncBulkInputs(select, values, container);
+        } else if (isInlineEdit && values.length === 0) {
+            syncInlineInputs(select, container);
+        } else {
+            syncRegularInputs(select, values, container);
+        }
+    };
+
+    const calculateAllowed = (parentValues, mapping) => {
+        const hasMapping = parentValues.some(v => Object.prototype.hasOwnProperty.call(mapping, v));
         let allowed = [];
         parentValues.forEach(v => {
             if (Object.prototype.hasOwnProperty.call(mapping, v) && Array.isArray(mapping[v])) {
@@ -136,10 +114,10 @@
             }
         });
         allowed = Array.from(new Set(allowed));
+        return { allowed, hasMapping };
+    };
 
-        const isBulk        = childSelect.querySelector(`option[value="${NONE_VALUE}"]`) !== null;
-        const noChangeOption = childSelect.querySelector('option[value=""]');
-
+    const updateOptionVisibility = (childSelect, allowed, hasMapping) => {
         Array.from(childSelect.querySelectorAll('option')).forEach(opt => {
             const val       = String(opt.value);
             const isSpecial = val === NONE_VALUE;
@@ -149,7 +127,11 @@
             opt.hidden       = disallowed;
             opt.style.display = disallowed ? 'none' : '';
         });
+    };
 
+    const applyChildState = (parentValues, childSelect, allowed, hasMapping, defaults) => {
+        const isBulk        = childSelect.querySelector(`option[value="${NONE_VALUE}"]`) !== null;
+        const noChangeOption = childSelect.querySelector('option[value=""]');
         const hasNone  = parentValues.includes(NONE_VALUE);
         const hasValue = parentValues.some(v => v !== '' && v !== NONE_VALUE);
 
@@ -209,7 +191,13 @@
             });
             childSelect.dataset.valueMap = JSON.stringify(valueMap);
         }
+    };
 
+    const updateChild = (parentSelect, childSelect, mapping, defaults = {}) => {
+        const parentValues = getValues(parentSelect);
+        const { allowed, hasMapping } = calculateAllowed(parentValues, mapping);
+        updateOptionVisibility(childSelect, allowed, hasMapping);
+        applyChildState(parentValues, childSelect, allowed, hasMapping, defaults);
         syncHiddenInputs(childSelect);
         childSelect.dispatchEvent(new Event('change', { bubbles: true }));
     };
@@ -286,11 +274,6 @@
         root.querySelectorAll('select[data-field-id]').forEach(sel => {
             if (relevantFieldIds.has(String(sel.dataset.fieldId))) {
                 syncHiddenInputs(sel);
-            }
-        });
-
-        root.querySelectorAll('select[data-field-id]').forEach(sel => {
-            if (relevantFieldIds.has(String(sel.dataset.fieldId))) {
                 if (!sel.dataset.syncHiddenInputListener) {
                     sel.addEventListener('change', () => syncHiddenInputs(sel));
                     sel.dataset.syncHiddenInputListener = '1';

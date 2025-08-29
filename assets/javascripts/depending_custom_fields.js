@@ -129,6 +129,17 @@
         });
     };
 
+    const setParentVisibility = (childSelect, visible) => {
+        const parent = childSelect.closest('p');
+        if (!parent) return;
+
+        if (visible) {
+            parent.hidden = false;
+        } else {
+            parent.hidden = true;
+        }
+    };
+    
     const applyChildState = (parentValues, childSelect, allowed, hasMapping, defaults) => {
         const isBulk        = childSelect.querySelector(`option[value="${NONE_VALUE}"]`) !== null;
         const noChangeOption = childSelect.querySelector('option[value=""]');
@@ -137,9 +148,11 @@
 
         if (hasNone) {
             childSelect.disabled = true;
+            setParentVisibility(childSelect, false);
             setValues(childSelect, [NONE_VALUE]);
         } else if (!hasValue || !hasMapping) {
             childSelect.disabled = !isBulk;
+            setParentVisibility(childSelect, isBulk);
             if (!isBulk) {
                 setValues(childSelect, []);
             } else {
@@ -148,6 +161,7 @@
             }
         } else {
             childSelect.disabled = false;
+            setParentVisibility(childSelect, true);
             const currentVals = getValues(childSelect).filter(v => allowed.includes(v) || v === NONE_VALUE);
             setValues(childSelect, currentVals);
         }
